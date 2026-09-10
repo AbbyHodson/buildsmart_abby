@@ -1,0 +1,83 @@
+﻿Phase,Target,Material,Mass Value (2023),Unit
+Production,Cement production,Limestone & others,7.562,Million metric tons/year
+Production,Cement production,SCMs,0.339,Million metric tons/year
+Production,Cement production,Sand,0,Million metric tons/year
+Production,Cement production,Slag & ash,0,Million metric tons/year
+Production,Cement production,Clinker,76.789,Million metric tons/year
+Production,Cement production,Gypsum & anyhydrite,5.235,Million metric tons/year
+Production,Cement production,Imported clinker,1.082,Million metric tons/year
+Production,Cement production,Imported limestones and calcite rocks,1.09026,Million metric tons/year
+Production,Cement production,Imported Cement,24.986,Million metric tons/year
+Production,Cement production,Imported Gypsum & anyhydrite,0.903650338,Million metric tons/year
+Production,Cement production,Cement production waste,10.85301334,Million metric tons/year
+Production,Cement klin dust,Clinker,11.51835,Million metric tons/year
+Production,Cement klin dust recycled,Clinker,8.6387625,Million metric tons/year
+Production,CKD landfilled,Clinker,2.8795875,Million metric tons/year
+Production,Export,Clinker,0,Million metric tons/year
+Production,Concrete production,Cement production,107.133897,Million metric tons/year
+Production,Concrete production,SCMs,11.90376633,Million metric tons/year
+Production,Concrete production,Imported SCMs,0.673241629,Million metric tons/year
+Production,Concrete production,Aggregate production,538.4970659,Million metric tons/year
+Production,Aggregate production,fine aggregates,278.1114245,Million metric tons/year
+Production,Aggregate production,coarse aggregates,260.3856414,Million metric tons/year
+Production,Concrete production,Water,53.40986067,Million metric tons/year
+Production,Export,Cement production,0.889,Million metric tons/year
+Production,Concrete production waste,Concrete production,19.74623912,Million metric tons/year
+Use,Use phase,Concrete production,712.56526,Million metric tons/year
+Use,Residential Buildings,Concrete production,203.5367744,Million metric tons/year
+Use,Nonresidential Buildings,Concrete production,139.3914403,Million metric tons/year
+Use,Public Utility & Other,Concrete production,17.23223842,Million metric tons/year
+Use,Farm Nonresidential,Concrete production,24.75022883,Million metric tons/year
+Use,Oil & Gas Wells,Concrete production,12.90813432,Million metric tons/year
+Use,Miscellaneous,Concrete production,10.37636959,Million metric tons/year
+Use,Buildings,Concrete production,10.55538871,Million metric tons/year
+Use,Highways & Streets,Concrete production,214.292402,Million metric tons/year
+Use,Military/Public Security,Concrete production,1.130932725,Million metric tons/year
+Use,Conservation,Concrete production,21.73768685,Million metric tons/year
+Use,Sewer Systems,Concrete production,30.17147481,Million metric tons/year
+Use,Water Supply Systems,Concrete production,24.86151893,Million metric tons/year
+EoL,EoL management,Residential Buildings,58.6286718,Million metric tons/year
+EoL,EoL management,Nonresidential Buildings,94.59102293,Million metric tons/year
+EoL,EoL management,Public Utility & Other,1.690883036,Million metric tons/year
+EoL,EoL management,Farm Nonresidential,3.69452489,Million metric tons/year
+EoL,EoL management,Oil & Gas Wells,1.705682418,Million metric tons/year
+EoL,EoL management,Miscellaneous,6.750167259,Million metric tons/year
+EoL,EoL management,Buildings,4.218776577,Million metric tons/year
+EoL,EoL management,Highways & Streets,110.9959667,Million metric tons/year
+EoL,EoL management,Military/Public Security,0.334922818,Million metric tons/year
+EoL,EoL management,Conservation,2.331889494,Million metric tons/year
+EoL,EoL management,Sewer Systems,15.69347613,Million metric tons/year
+EoL,EoL management,Water Supply Systems,11.00369609,Million metric tons/year
+EoL,Recycled Aggregates,EoL management,232.0496195,Million metric tons/year
+EoL,Landfill,EoL management,54.31439999,Million metric tons/year
+EoL,Manufacturing products,EoL management,25.27566067,Million metric tons/year
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+,,,,
+Appendix,,,,
+Production,Gypsum & anyhydrite,Imported Gypsum & anyhydrite,6.872951793,Million metric tons/year
+,,,,
+,,,,
+,,,,
+Production,Cement production,Imported clinker,0.921,Million metric tons/year
+,,,,
+Production,Concrete production,Portland cement,82,Million metric tons/year
+Production,Concrete production,Blended cement,24,Million metric tons/year

@@ -1,0 +1,637 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <meta charset="UTF-8">
+  <title>Material Demand Charts</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* layout for supply, demand, and availability maps */
+    .map-section { margin-top: 30px; }
+    .map-controls { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+    .map-info {
+      padding: 8px 10px; background: rgba(255,255,255,0.9);
+      border-radius: 4px; box-shadow: 0 0 12px rgba(0,0,0,0.2); font-size: 13px;
+    }
+    .map-legend { line-height: 1.6; }
+    .legend-bar { height: 12px; width: 200px; border: 1px solid #999; }
+    .legend-scale { display: flex; justify-content: space-between; font-size: 11px; }
+    .legend-nodata { display: inline-block; width: 12px; height: 12px;
+      background: #e0e0e0; border: 1px solid #999; vertical-align: middle; }
+
+    .charts-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #map {
+      width: 820px;
+      height: 400px;
+      border: 1px solid #898888;
+    }
+
+    /* general styles */
+    .panel-title {
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 0 6px 0;
+      text-align: left;
+      color: #898888;
+    }
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    /* layout for demand charts */
+    .specifications-and-charts-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .building-specifications,
+    .material-availability,
+    .alternative-materials {
+      border: 1px solid #898888;
+      padding: 20px;
+      box-sizing: border-box;
+      margin: 0;
+    }
+    /* form layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      align-items: center;
+      gap: 12px 15px;
+      margin-top: 10px;
+    }
+
+    .form-grid label {
+      justify-self: start;
+    }
+
+    .form-grid input[type="text"],
+    .form-grid input[type="number"],
+    .form-grid select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 5px;
+    }
+
+    .form-grid input[type="checkbox"] {
+      justify-self: start;
+    }
+
+    /* submit button */
+    .submit-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 20px;
+    }
+
+    /* charts layout */
+    .charts-container {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+    }
+
+    .chart-container {
+      width: 400px;
+      border: 1px solid #898888;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    /* Chart.js overwrites inline width/height on the canvas itself, so the
+       canvas needs its own dedicated wrapper to size against. */
+    .canvas-wrap {
+      position: relative;
+      height: 380px;
+    }
+
+    .spec-summary {
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      color: black;
+      margin-bottom: 10px;
+    }
+
+    .scenario-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .scenario-list label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .scenario-list input[type="checkbox"] {
+      margin: 0;
+      flex: 0 0 auto;
+    }
+
+    .controls-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 0 0 320px;
+    }
+
+    .slider-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .slider-row label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .slider-input {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-input input[type="range"] {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .slider-input output {
+      flex: 0 0 auto;
+      width: 44px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+    }
+
+    .site-banner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 20px;
+      background: #f4f4f4;
+      border-bottom: 1px solid #cfcfcf;
+      margin-bottom: 20px;
+    }
+
+    .brand-logo {
+      height: 40px;
+      border-radius: 10%;
+      display: block;
+    }
+
+    .brand-name {
+      font-size: 32px;
+      font-weight: bold;
+      color: #222;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+      margin: 0 0 0 20px;
+      padding: 0;
+    }
+
+    .nav-links a {
+      color: #444;
+      text-decoration: none;
+      font-size: 22px;
+    }
+
+    .nav-links a:hover { color: #000; text-decoration: underline; }
+    .nav-links a.active { font-weight: bold; color: #000; }
+
+    .feedback-btn {
+      margin-left: auto;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #ffc107;
+      border: 1px solid #e0a800;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+
+  </style>
+</head>
+
+<body>
+  <nav class="site-banner">
+    <a class="brand" href="/">
+      <img src="{% static 'images/lbl_logo.jpeg' %}" alt="Berkeley Lab" class="brand-logo">
+    </a>
+    <a class="brand-name" href="/">Building Supply chain Material Analysis and Risk Trade-off Tool (BuildSMART)</a>
+  
+    <ul class="nav-links">
+      <li><a href="/" class="active">Tool</a></li>
+      <li><a href="/data-sources/">Data Sources</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/faq/">FAQs</a></li>
+    </ul>
+  
+    <button type="button" class="feedback-btn" id="feedback-btn">Give Feedback</button>
+  </nav>
+
+  <div class="specifications-and-charts-container">
+    <div class="controls-column">
+      <details class="building-specifications" open>
+        <summary class="spec-summary">Building Specifications</summary>
+      
+        <form method="post">
+          <h3>New Building</h3>
+      
+          {% csrf_token %}
+          <div class="form-grid">
+            <label for="id_location">Location</label>
+            {{ form.location }}
+          
+            <label for="id_building_type">Building type</label>
+            {{ form.building_type }}
+          
+            <label for="id_square_footage">Building size (sq ft)</label>
+            {{ form.square_footage }}
+          
+            <label for="id_reuse_materials">Reuse materials?</label>
+            {{ form.reuse_materials }}
+          </div>
+          
+          <div id="demolished-building-text" style="display: none;">
+            <h3>Demolished Building</h3>
+          </div>
+          
+          <div id="old-building-fields" class="form-grid" style="display: none;">
+            <label for="id_old_location">Location</label>
+            {{ form.old_location }}
+
+            <label for="id_old_building_type">Building type</label>
+            {{ form.old_building_type }}
+          
+            <label for="id_old_building_square_footage">Building size (sq ft)</label>
+            {{ form.old_building_square_footage }}
+          </div>      
+          
+          <button type="submit" class="submit-button">Estimate baseline material demand</button>
+        </form>
+      </details>
+
+      <details class="material-availability">
+        <summary class="spec-summary">Material Availability Scenarios</summary>
+  
+        <div class="scenario-list">
+          <label><input type="checkbox" name="scenario" value="Fly ash recovery (upper limit)"> Fly ash recovery (upper limit)</label>
+          <label><input type="checkbox" name="scenario" value="Fly ash recovery (lower limit)"> Fly ash recovery (lower limit)</label>
+          <label><input type="checkbox" name="scenario" value="Blast furnace slag production (upper limit)"> Blast furnace slag production (upper limit)</label>
+          <label><input type="checkbox" name="scenario" value="Blast furnace slag production (lower limit)"> Blast furnace slag production (lower limit)</label>
+          <label><input type="checkbox" name="scenario" value="Natural pozzolan recovery (upper limit)"> Natural pozzolan recovery (upper limit)</label>
+          <label><input type="checkbox" name="scenario" value="Natural pozzolan recovery (lower limit)"> Natural pozzolan recovery (lower limit)</label>
+        </div>
+      </details>
+
+      <details class="alternative-materials">
+        <summary class="spec-summary">Alternative Materials</summary>
+      
+        <div class="slider-list">
+          <div class="slider-row">
+            <label for="util-fly-ash-alt">Recovered fly ash</label>
+            <div class="slider-input">
+              <input type="range" id="util-fly-ash-alt" class="util-slider"
+                     data-material="Fly ash (alternative)"
+                     min="0" max="30" step="5" value="0">
+              <output for="util-fly-ash-alt">0%</output>
+            </div>
+          </div>
+      
+          <div class="slider-row">
+            <label for="util-pozz">Natural pozzolans</label>
+            <div class="slider-input">
+              <input type="range" id="util-pozz" class="util-slider"
+                     data-material="Natural pozzolans"
+                     min="0" max="40" step="5" value="0">
+              <output for="util-pozz">0%</output>
+            </div>
+          </div>
+      
+          <div class="slider-row">
+            <label for="util-gypsum">Recovered gypsum</label>
+            <div class="slider-input">
+              <input type="range" id="util-gypsum" class="util-slider"
+                     data-material="Recovered gypsum"
+                     min="0" max="100" step="5" value="0">
+              <output for="util-gypsum">0%</output>
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <label for="util-powder">Recycled concrete powder</label>
+            <div class="slider-input">
+              <input type="range" id="util-powder" class="util-slider"
+                     data-material="Recycled concrete powder"
+                     min="0" max="30" step="5" value="0">
+              <output for="util-powder">0%</output>
+            </div>
+          </div>
+
+          <div class="slider-row">
+            <label for="util-agg">Recycled concrete aggregates</label>
+            <div class="slider-input">
+              <input type="range" id="util-agg" class="util-slider"
+                     data-material="Recycled concrete aggregates"
+                     min="0" max="100" step="5" value="0">
+              <output for="util-agg">0%</output>
+            </div>
+          </div>
+        </div>
+      </details>      
+    </div>
+
+    <div class="charts-column">
+      <div class="charts-container">
+        <div class="chart-container">
+          <h3 class="panel-title">MATERIAL DEMAND</h3>
+          <div class="canvas-wrap">
+            <canvas id="materialsPie"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <h3 class="panel-title">CONCRETE CONSTITUENTS</h3>
+          <div class="canvas-wrap">
+            <canvas id="concretePie"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-section">
+        <h3 class="panel-title">MATERIAL SUPPLY, DEMAND, AND AVAILABILITY</h3>
+        <div class="map-controls">
+          <label for="metric-select">Show</label>
+          <select id="metric-select">
+            <option value="availability">Availability (supply − demand)</option>
+            <option value="supply">Supply</option>
+            <option value="demand">Demand</option>
+          </select>
+          <label for="year-slider">Year: <strong id="year-label">2025</strong></label>
+          <input type="range" id="year-slider" min="2025" max="2050" step="1" value="2025">
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+
+    // JavaScript to toggle the visibility of old building fields
+    const reuseMaterialsCheckbox = document.getElementById("id_reuse_materials");
+    const demolishedBuildingText = document.getElementById("demolished-building-text");
+    const oldBuildingFields = document.getElementById("old-building-fields");
+    const oldFields = oldBuildingFields.querySelectorAll("input, select");
+
+    reuseMaterialsCheckbox.addEventListener("change", function () {
+        const show = this.checked;
+        oldBuildingFields.style.display = show ? "grid" : "none";
+        demolishedBuildingText.style.display = show ? "block" : "none";
+        oldFields.forEach(el => { el.required = show; });
+    });
+
+    reuseMaterialsCheckbox.dispatchEvent(new Event("change"));
+  </script>
+
+  <script>
+    // JavaScript to display supply, demand, and availability maps
+    const MAP_DATA_URL = "{% static 'processed_data/map_data.json' %}";
+    const STATES_GEOJSON_URL = "{% static 'raw_data/us-states.json' %}";
+    
+    (async function () {
+      const [mapData, statesGeo] = await Promise.all([
+        fetch(MAP_DATA_URL).then(r => r.json()),
+        fetch(STATES_GEOJSON_URL).then(r => r.json()),
+      ]);
+    
+      const SEQUENTIAL = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b'];
+      const DIVERGING  = ['#b2182b', '#ef8a62', '#f7f7f7', '#67a9cf', '#2166ac'];
+      const NO_DATA    = '#e0e0e0';
+    
+      let metric = 'availability';
+      let year = String(mapData.years[0]);
+      let activeMaterial = Object.keys(mapData.data[metric])[0];
+    
+      function lerpColor(a, b, t) {
+        const ah = a.match(/\w\w/g).map(x => parseInt(x, 16));
+        const bh = b.match(/\w\w/g).map(x => parseInt(x, 16));
+        return '#' + ah.map((v, i) => Math.round(v + (bh[i] - v) * t))
+                      .map(v => v.toString(16).padStart(2, '0')).join('');
+      }
+      function ramp(stops, t) {
+        t = Math.min(1, Math.max(0, t));
+        const seg = t * (stops.length - 1);
+        const i = Math.min(Math.floor(seg), stops.length - 2);
+        return lerpColor(stops[i], stops[i + 1], seg - i);
+      }
+    
+      // Fix the colour scale per material+metric across ALL years so that
+      // dragging the slider changes the map, not the meaning of the colours.
+      const scales = {};
+      for (const m of Object.keys(mapData.data)) {
+        scales[m] = {};
+        for (const mat of Object.keys(mapData.data[m])) {
+          let min = Infinity, max = -Infinity;
+          for (const st of Object.values(mapData.data[m][mat])) {
+            for (const v of Object.values(st)) {
+              if (v === null) continue;
+              if (v < min) min = v;
+              if (v > max) max = v;
+            }
+          }
+          if (!isFinite(min)) { min = 0; max = 1; }
+          scales[m][mat] = { min, max, diverging: (m === 'availability' && min < 0) };
+        }
+      }
+    
+      function valueFor(material, stateName) {
+        const states = mapData.data[metric][material] || {};
+        const rec = states[stateName];
+        return rec ? (rec[year] ?? null) : null;
+      }
+    
+      function colorFor(material, value) {
+        if (value === null) return NO_DATA;
+        const s = scales[metric][material];
+        if (s.diverging) {
+          const bound = Math.max(Math.abs(s.min), Math.abs(s.max)) || 1;
+          // sqrt keeps small values visible when one state dominates the range
+          const t = 0.5 + 0.5 * Math.sign(value) * Math.sqrt(Math.abs(value) / bound);
+          return ramp(DIVERGING, t);
+        }
+        const span = (s.max - s.min) || 1;
+        return ramp(SEQUENTIAL, Math.sqrt((value - s.min) / span));
+      }
+    
+      function fmt(v) {
+        if (v === null) return 'no data';
+        const mmt = v / 1e6;
+        return (Math.abs(mmt) >= 0.01 ? mmt.toFixed(2) + ' MMT'
+                                      : Math.round(v).toLocaleString() + ' t');
+      }
+    
+      const map = L.map('map', { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors, &copy; CARTO', maxZoom: 12
+      }).addTo(map);
+    
+      const info = L.control({ position: 'topright' });
+      info.onAdd = function () {
+        this._div = L.DomUtil.create('div', 'map-info');
+        this.update();
+        return this._div;
+      };
+      info.update = function (props) {
+        const name = props ? props.name : null;
+        this._div.innerHTML = '<strong>' + activeMaterial + '</strong><br>' +
+          metric + ', ' + year + '<hr style="margin:4px 0">' +
+          (name ? name + ': ' + fmt(valueFor(activeMaterial, name))
+                : 'Hover over a state');
+      };
+      info.addTo(map);
+    
+      const legend = L.control({ position: 'bottomright' });
+      legend.onAdd = function () {
+        this._div = L.DomUtil.create('div', 'map-info map-legend');
+        this.update();
+        return this._div;
+      };
+      legend.update = function () {
+        const s = scales[metric][activeMaterial];
+        const stops = s.diverging ? DIVERGING : SEQUENTIAL;
+        const lo = s.diverging ? -Math.max(Math.abs(s.min), Math.abs(s.max)) : s.min;
+        const hi = s.diverging ?  Math.max(Math.abs(s.min), Math.abs(s.max)) : s.max;
+        this._div.innerHTML =
+          '<div class="legend-bar" style="background:linear-gradient(to right,'
+            + stops.join(',') + ')"></div>' +
+          '<div class="legend-scale"><span>' + fmt(lo) + '</span><span>'
+            + fmt(hi) + '</span></div>' +
+          '<span class="legend-nodata"></span> no data';
+      };
+      legend.addTo(map);
+    
+      function styleFor(material) {
+        return feature => ({
+          fillColor: colorFor(material, valueFor(material, feature.properties.name)),
+          weight: 1, color: '#ffffff', fillOpacity: 0.85
+        });
+      }
+    
+      // One choropleth layer per material, registered as *base* layers so the
+      // control shows radio buttons -- stacked choropleths would be unreadable.
+      const materialLayers = {};
+      const baseLayers = {};
+      for (const material of Object.keys(mapData.data[metric])) {
+        const layer = L.geoJSON(statesGeo, {
+          style: styleFor(material),
+          onEachFeature: (feature, lyr) => {
+            lyr.on({
+              mouseover: e => {
+                e.target.setStyle({ weight: 3, color: '#333', fillOpacity: 0.95 });
+                e.target.bringToFront();
+                info.update(feature.properties);
+              },
+              mouseout: e => {
+                materialLayers[material].resetStyle(e.target);
+                info.update();
+              },
+              click: e => map.fitBounds(e.target.getBounds())
+            });
+          }
+        });
+        materialLayers[material] = layer;
+        baseLayers[material] = layer;
+      }
+    
+      // Overlays are on/off checkboxes
+      const projectLayer = L.layerGroup();
+      const overlays = { 'Project location': projectLayer };
+    
+      L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
+      materialLayers[activeMaterial].addTo(map);
+    
+      function refresh() {
+        for (const [material, layer] of Object.entries(materialLayers)) {
+          layer.setStyle(styleFor(material));
+        }
+        info.update();
+        legend.update();
+      }
+    
+      map.on('baselayerchange', e => { activeMaterial = e.name; refresh(); });
+    
+      document.getElementById('metric-select').addEventListener('change', function () {
+        metric = this.value;
+        refresh();
+      });
+    
+      const slider = document.getElementById('year-slider');
+      slider.min = mapData.years[0];
+      slider.max = mapData.years[mapData.years.length - 1];
+      slider.addEventListener('input', function () {
+        year = this.value;
+        document.getElementById('year-label').textContent = year;
+        refresh();
+      });
+    
+      // Expose for the project-location marker once you have coordinates back
+      // from your geocoder.
+      window.setProjectLocation = function (lat, lon, label) {
+        projectLayer.clearLayers();
+        L.marker([lat, lon]).bindPopup(label || 'Project site').addTo(projectLayer);
+        projectLayer.addTo(map);
+      };
+    })();
+
+    function selectedScenarios() {
+      return [...document.querySelectorAll('input[name="scenario"]:checked')]
+        .map(el => el.value);
+    }
+
+    document.querySelector('.scenario-list').addEventListener('change', () => {
+      console.log(selectedScenarios());
+    });
+
+    function utilizationRates() {
+
+      const rates = {};
+    document.querySelectorAll('.util-slider').forEach(el => {
+      rates[el.dataset.material] = Number(el.value) / 100;
+    });
+    return rates;
+  }
+
+  document.querySelector('.slider-list').addEventListener('input', (e) => {
+    if (!e.target.classList.contains('util-slider')) return;
+    e.target.nextElementSibling.textContent = e.target.value + '%';
+    console.log(utilizationRates());
+  });
+
+  </script>
+
+  <script src="{% static 'plot_base_demand.js' %}"></script>
+</body>
+</html>
