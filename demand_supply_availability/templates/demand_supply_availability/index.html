@@ -237,7 +237,7 @@
 </head>
 
 <body>
-  <nav class="site-banner">
+  <nav class="site-banner"> 
     <a class="brand" href="/">
       <img src="{% static 'images/lbl_logo.jpeg' %}" alt="Berkeley Lab" class="brand-logo">
     </a>
@@ -384,11 +384,19 @@
           <div class="canvas-wrap">
             <canvas id="concretePie"></canvas>
           </div>
+        </div>        <div class="chart-container">
+          <h3 class="panel-title">MATERIAL AVAILABILITY</h3>
+          <div id="avail-subtitle" style="font-size:12px;color:#555;margin-bottom:6px">
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="availabilityBar"></canvas>
+          </div>
+          <div id="avail-note" style="font-size:11px;color:#777;margin-top:6px"></div>
         </div>
       </div>
 
       <div class="map-section">
-        <h3 class="panel-title">MATERIAL SUPPLY, DEMAND, AND AVAILABILITY</h3>
+        <h3 class="panel-title">SUPPLY, DEMAND, AND AVAILABILITY MAP</h3>
         <div class="map-controls">
           <label for="metric-select">Show</label>
           <select id="metric-select">
@@ -432,10 +440,13 @@
     // JavaScript to display supply, demand, and availability maps
     const MAP_DATA_URL = "{% static 'processed_data/map_data.json' %}";
     const STATES_GEOJSON_URL = "{% static 'raw_data/us-states.json' %}";
-    
+
+    // Shared so the availability chart can reuse it without a second fetch.
+    const mapDataPromise = fetch(MAP_DATA_URL).then(r => r.json());
+
     (async function () {
       const [mapData, statesGeo] = await Promise.all([
-        fetch(MAP_DATA_URL).then(r => r.json()),
+        mapDataPromise,
         fetch(STATES_GEOJSON_URL).then(r => r.json()),
       ]);
     
@@ -672,6 +683,167 @@
     console.log(utilizationRates());
   });
 
+  </script>
+  <script>
+    const CONCRETE_DEMAND_URL = "{% static 'processed_data/concrete_demand.json' %}";
+
+    (async function () {
+      const [mapData, concreteRaw] = await Promise.all([
+        mapDataPromise,
+        fetch(CONCRETE_DEMAND_URL + '?t=' + Date.now()).then(r => r.ok ? r.json() : []),
+      ]);
+
+      // --- concrete_demand.json material names -> map_data.json material keys ---
+      // Coarse/fine and natural/crushed all collapse to 'Aggregate' because we
+      // only have combined aggregate availability; their demands get summed.
+      const MATERIAL_KEY = {
+        'Crushed coarse aggregates': 'Aggregate',
+        'Natural coarse aggregates': 'Aggregate',
+        'Crushed fine aggregates': 'Aggregate',
+        'Natural fine aggregates': 'Aggregate',
+        'Cement': 'Cement',
+        'Fly ash': 'Fly ash (conventional)',
+        'Blast furnace slag': 'Blast furnace slag'
+      };
+
+      // Fixed bar order so bars don't reshuffle between renders.
+      const DISPLAY_ORDER = ['Cement', 'Aggregate', 'Fly ash (conventional)',
+                             'Fly ash (alternative)', 'Blast furnace slag',
+                             'Pozzolan'];
+
+      // Sum demand into map_data material keys.
+      function demandByMaterial(rows) {
+        const out = {};
+        const unmapped = [];
+        for (const row of rows) {
+          const name = (row['Material'] ?? '').trim();
+          const val = Number(row['Baseline Demand (lbs)']) || 0;
+          const key = MATERIAL_KEY[name];
+          if (!key) { unmapped.push(name); continue; }
+          out[key] = (out[key] || 0) + val;
+        }
+        if (unmapped.length) console.log('Unmapped concrete rows:', unmapped);
+        return out;
+      }
+
+      const demand = demandByMaterial(concreteRaw);
+
+      // concrete_demand.json is one building in U.S. tons; map_data is in
+      // MILLION U.S. tons. Change this if your demand file uses other units.
+      const BLDG_TO_MILLION_TONS = 1e-6;
+
+      const canvas = document.getElementById('availabilityBar');
+      const subtitle = document.getElementById('avail-subtitle');
+      const note = document.getElementById('avail-note');
+      let chart = null;
+
+      function selectedState() {
+        const el = document.getElementById('id_location');
+        if (!el) return null;
+        const txt = el.tagName === 'SELECT'
+          ? el.options[el.selectedIndex].text
+          : el.value;
+        return (txt || '').trim();
+      }
+
+      function selectedYear() {
+        const el = document.getElementById('id_construction_year');
+        const y = el ? Number(el.value) : mapData.years[0];
+        return String(Math.min(Math.max(y, mapData.years[0]),
+                              mapData.years[mapData.years.length - 1]));
+      }
+
+      // Baseline availability for a material, or supply if the material has no
+      // demand series (Pozzolan). Returns null when the state has no data.
+      function baseline(materialKey, state, yr) {
+        for (const m of ['availability', 'supply']) {
+          const states = (mapData.data[m] || {})[materialKey];
+          if (!states) continue;
+          const rec = states[state];
+          if (!rec) continue;
+          const v = rec[yr];
+          if (v !== null && v !== undefined) return { value: v, metric: m };
+        }
+        return null;
+      }
+
+      function render() {
+        const state = selectedState();
+        const yr = selectedYear();
+        subtitle.textContent = state
+          ? state + ', ' + yr + ' (million U.S. tons)'
+          : 'Select a location';
+
+        const labels = [], values = [], colors = [], missing = [], supplyOnly = [];
+
+        for (const key of DISPLAY_ORDER) {
+          if (!(key in demand)) continue;
+          const lbs = demand[key];
+          const base = baseline(key, state, yr);
+          if (!base) { missing.push(key); continue; }
+          if (base.metric === 'supply') supplyOnly.push(key);
+
+          const net = base.value - lbs * BLDG_TO_MILLION_TONS;
+          labels.push(key);
+          values.push(net);
+          colors.push(net < 0 ? '#b2182b' : '#2171b5');
+        }
+
+        const cfg = {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Availability after this building',
+              data: values,
+              backgroundColor: colors,
+              borderColor: '#666',
+              borderWidth: 1,
+            }],
+          },
+          options: {
+            indexAxis: 'y',            // long material names read better sideways
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: c => c.parsed.x.toFixed(3) + ' million U.S. tons',
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'Million U.S. tons' },
+                grid: { color: ctx => ctx.tick.value === 0 ? '#333' : '#e5e5e5' },
+              },
+              y: { ticks: { autoSkip: false } },
+            },
+          },
+        };
+
+        if (chart) {
+          chart.data = cfg.data;
+          chart.options = cfg.options;
+          chart.update();
+        } else {
+          chart = new Chart(canvas.getContext('2d'), cfg);
+        }
+
+        const msgs = [];
+        if (missing.length) msgs.push('No state data: ' + missing.join(', ') + '.');
+        if (supplyOnly.length) msgs.push('Supply only (no demand series): '
+                                        + supplyOnly.join(', ') + '.');
+        note.textContent = msgs.join(' ');
+      }
+
+      render();
+      document.getElementById('id_location')
+        ?.addEventListener('change', render);
+      document.getElementById('id_construction_year')
+        ?.addEventListener('input', render);
+    })();
   </script>
 
   <script src="{% static 'plot_base_demand.js' %}"></script>

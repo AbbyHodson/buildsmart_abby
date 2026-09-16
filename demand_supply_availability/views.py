@@ -74,8 +74,9 @@ def index(request):
                     old_building_sizes=[form.cleaned_data["old_building_square_footage"]] if reuse_materials else None,
                 )
                 context["chart_data"] = json.dumps(results)
+
     else:
         form = BuildingForm()
-
+    
     context["form"] = form
     return render(request, "demand_supply_availability/index.html", context)

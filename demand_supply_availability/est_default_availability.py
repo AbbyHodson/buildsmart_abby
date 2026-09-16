@@ -189,7 +189,7 @@ def build_map_data(materials=None, output_path=None, log=print):
 
     payload = {
         "years": years,
-        "units": "metric tonnes",
+        "units": "million U.S. tons",
         "data": {"supply": {}, "demand": {}, "availability": {}},
     }
 

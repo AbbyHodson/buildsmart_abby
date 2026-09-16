@@ -193,12 +193,12 @@ def est_base_demand(
     # create seperate dataframe for demand of concrete components based on region
     concrete_demand = cement_mix[["Constituents per kg PC", region]]
 
-    # convert from kg cement constituent per kg cement to lb per lb
-    concrete_demand[region] = concrete_demand[region] * 2.20462
+    # determine total cement demand based on concrete demand
+    new_bldg_demand['Cement'] = new_bldg_demand["Cast-in-place concrete"] / (1 + sum(concrete_demand[region]))
 
-    # multiply by total concrete demand to obtain total amount of raw materials needed for new construction
+    # multiply by total cement demand to obtain total amount of raw materials needed for new construction
     concrete_demand[region] = (
-        concrete_demand[region] * new_bldg_demand["Cast-in-place concrete"]
+        concrete_demand[region] * new_bldg_demand["Cement"]
     )
 
     # rename columns to match formatting of new_bldg_demand
@@ -209,6 +209,17 @@ def est_base_demand(
         },
         inplace=True,
     )
+
+    # add cement demand to concrete consituent dataframe
+    extra_rows = pd.DataFrame(
+        {
+            "Material": ["Cement"],
+            "Baseline Demand (lbs)": [
+                new_bldg_demand["Cement"],
+            ],
+        }
+    )
+    concrete_demand = pd.concat([extra_rows, concrete_demand], ignore_index=True)
 
     # reformat new_bldg_demand as a dataframe for ease of plotting
     new_bldg_demand = pd.DataFrame(new_bldg_demand)
