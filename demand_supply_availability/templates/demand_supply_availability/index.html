@@ -271,7 +271,13 @@
           
             <label for="id_square_footage">Building size (sq ft)</label>
             {{ form.square_footage }}
-          
+
+            <label for="id_construction_year">Construction year</label>
+            <div class="slider-input">
+              {{ form.construction_year }}
+              <output for="id_construction_year">{{ form.construction_year.value }}</output>
+            </div>            
+
             <label for="id_reuse_materials">Reuse materials?</label>
             {{ form.reuse_materials }}
           </div>
@@ -405,6 +411,8 @@
     const demolishedBuildingText = document.getElementById("demolished-building-text");
     const oldBuildingFields = document.getElementById("old-building-fields");
     const oldFields = oldBuildingFields.querySelectorAll("input, select");
+    const constructionYear = document.getElementById("id_construction_year");
+    const constructionYearOut = constructionYear.nextElementSibling;
 
     reuseMaterialsCheckbox.addEventListener("change", function () {
         const show = this.checked;
@@ -414,6 +422,10 @@
     });
 
     reuseMaterialsCheckbox.dispatchEvent(new Event("change"));
+
+    constructionYear.addEventListener("input", function () {
+      constructionYearOut.textContent = this.value;
+    });
   </script>
 
   <script>
@@ -430,11 +442,25 @@
       const SEQUENTIAL = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b'];
       const DIVERGING  = ['#b2182b', '#ef8a62', '#f7f7f7', '#67a9cf', '#2166ac'];
       const NO_DATA    = '#e0e0e0';
-    
+      const METRICS = ['availability', 'supply', 'demand'];
+
+      // Pozzolan only has supply data, so the layer list has to be the union across
+      // metrics rather than the keys of whichever metric happens to load first.
+      const allMaterials = [];
+      for (const m of METRICS) {
+        for (const mat of Object.keys(mapData.data[m] || {})) {
+          if (!allMaterials.includes(mat)) allMaterials.push(mat);
+        }
+      }
+
+      function hasData(m, material) {
+        return Boolean(mapData.data[m] && mapData.data[m][material]);
+      }
+
       let metric = 'availability';
       let year = String(mapData.years[0]);
-      let activeMaterial = Object.keys(mapData.data[metric])[0];
-    
+      let activeMaterial = allMaterials[0];
+
       function lerpColor(a, b, t) {
         const ah = a.match(/\w\w/g).map(x => parseInt(x, 16));
         const bh = b.match(/\w\w/g).map(x => parseInt(x, 16));
@@ -476,6 +502,7 @@
       function colorFor(material, value) {
         if (value === null) return NO_DATA;
         const s = scales[metric][material];
+        if (!s) return NO_DATA;
         if (s.diverging) {
           const bound = Math.max(Math.abs(s.min), Math.abs(s.max)) || 1;
           // sqrt keeps small values visible when one state dominates the range
@@ -488,9 +515,12 @@
     
       function fmt(v) {
         if (v === null) return 'no data';
-        const mmt = v / 1e6;
-        return (Math.abs(mmt) >= 0.01 ? mmt.toFixed(2) + ' MMT'
-                                      : Math.round(v).toLocaleString() + ' t');
+        const abs = Math.abs(v);
+        // Values arrive already scaled to million U.S. tons.
+        if (abs >= 100) return v.toFixed(0);
+        if (abs >= 1)   return v.toFixed(1);
+        if (abs >= 0.01) return v.toFixed(2);
+        return v.toFixed(3);
       }
     
       const map = L.map('map', { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
@@ -508,7 +538,11 @@
         const name = props ? props.name : null;
         this._div.innerHTML = '<strong>' + activeMaterial + '</strong><br>' +
           metric + ', ' + year + '<hr style="margin:4px 0">' +
-          (name ? name + ': ' + fmt(valueFor(activeMaterial, name))
+          (name ? name + ': ' + (() => {
+                    const v = valueFor(activeMaterial, name);
+                    return v === null ? 'no data'
+                                      : fmt(v) + ' million U.S. tons';
+                  })()
                 : 'Hover over a state');
       };
       info.addTo(map);
@@ -521,6 +555,12 @@
       };
       legend.update = function () {
         const s = scales[metric][activeMaterial];
+        if (!s) {
+          this._div.innerHTML =
+            '<span class="legend-nodata"></span> no ' + metric +
+            ' data for ' + activeMaterial;
+          return;
+        }
         const stops = s.diverging ? DIVERGING : SEQUENTIAL;
         const lo = s.diverging ? -Math.max(Math.abs(s.min), Math.abs(s.max)) : s.min;
         const hi = s.diverging ?  Math.max(Math.abs(s.min), Math.abs(s.max)) : s.max;
@@ -529,6 +569,8 @@
             + stops.join(',') + ')"></div>' +
           '<div class="legend-scale"><span>' + fmt(lo) + '</span><span>'
             + fmt(hi) + '</span></div>' +
+          '<div style="font-size:11px;color:#555;margin:2px 0 4px">' +
+            'million U.S. tons</div>' +
           '<span class="legend-nodata"></span> no data';
       };
       legend.addTo(map);
@@ -544,7 +586,7 @@
       // control shows radio buttons -- stacked choropleths would be unreadable.
       const materialLayers = {};
       const baseLayers = {};
-      for (const material of Object.keys(mapData.data[metric])) {
+      for (const material of allMaterials) {
         const layer = L.geoJSON(statesGeo, {
           style: styleFor(material),
           onEachFeature: (feature, lyr) => {

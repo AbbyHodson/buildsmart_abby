@@ -44,6 +44,13 @@ class BuildingForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": "form-control"})
     )
 
+    construction_year = forms.IntegerField(
+        min_value=2025,
+        max_value=2050,
+        initial=2025,
+        widget=forms.NumberInput(attrs={"type": "range", "step": 1}),
+    )
+    
     reuse_materials = forms.BooleanField(
         label="Reuse materials?",
         required=False,
