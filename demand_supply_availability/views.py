@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from .forms import BuildingForm
 from .est_base_demand import est_base_demand
+from .est_base_cost import est_base_cost
 import requests
 import os
 import logging
@@ -65,7 +66,7 @@ def index(request):
                 form.add_error("location", "Couldn't determine a US state from that location. Try adding a state or ZIP code.")
             else:
                 reuse_materials = form.cleaned_data["reuse_materials"]
-                results = est_base_demand(
+                demand_results = est_base_demand(
                     new_building_types=[form.cleaned_data["building_type"]],
                     new_building_sizes=[form.cleaned_data["square_footage"]],
                     state=state,
@@ -73,7 +74,15 @@ def index(request):
                     old_building_types=[form.cleaned_data["old_building_type"]] if reuse_materials else None,
                     old_building_sizes=[form.cleaned_data["old_building_square_footage"]] if reuse_materials else None,
                 )
-                context["chart_data"] = json.dumps(results)
+                cost_results = est_base_cost(
+                    new_building_types=[form.cleaned_data["building_type"]],
+                    new_building_sizes=[form.cleaned_data["square_footage"]],
+                    reused_materials=reuse_materials,
+                    old_building_types=[form.cleaned_data["old_building_type"]] if reuse_materials else None,
+                    old_building_sizes=[form.cleaned_data["old_building_square_footage"]] if reuse_materials else None,
+                )
+                context["demand_chart_data"] = json.dumps(demand_results)
+                context["cost_chart_data"] = json.dumps(cost_results)
 
     else:
         form = BuildingForm()

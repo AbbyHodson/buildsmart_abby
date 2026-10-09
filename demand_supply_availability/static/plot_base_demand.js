@@ -1,5 +1,6 @@
 let chart;   // all-materials chart
 let chart2;  // concrete-constituents chart
+let chart3;  // material-cost chart
 
 /* ---------- colour + hatch helpers ---------- */
 
@@ -40,7 +41,7 @@ function hatchPattern(color) {
   g.beginPath();
   g.moveTo(0, size);
   g.lineTo(size, 0);
-  g.moveTo(-1, 1);          // corner fill, keeps tiling seamless
+  g.moveTo(-1, 1);          
   g.lineTo(1, -1);
   g.moveTo(size - 1, size + 1);
   g.lineTo(size + 1, size - 1);
@@ -86,11 +87,14 @@ function chartOptions() {
 
 
 // Push new rows into an existing chart with colourful segments
-function updateChart(c, rows) {
+function updateChart(c, rows, valueKey) {
   if (!rows) return;
   const labels = rows.map(d => d.Material);
   c.data.labels = labels;
-  c.data.datasets[0].data = rows.map(d => d["Baseline Demand (lbs)"]);
+  
+  // This line now uses the exact key passed from the function call
+  c.data.datasets[0].data = rows.map(d => d[valueKey]); 
+  
   c.data.datasets[0].backgroundColor = segmentColors(labels);
   c.data.datasets[0].borderColor = "#fff";
   c.data.datasets[0].borderWidth = 1;
@@ -107,14 +111,21 @@ async function loadCharts() {
   const concrete = await fetch("/static/processed_data/concrete_demand.json")
     .then(res => res.json())
     .catch(error => { console.error("Error loading concrete data:", error); return []; });
+  
+  const cost = await fetch("/static/processed_data/new_bldg_cost.json")
+    .then(res => res.json())
+    .catch(error => { console.error("Error loading cost data:", error); return []; });
 
   const materialLabels = materials.map(d => d.Material);
   const materialValues = materials.map(d => d["Baseline Demand (lbs)"]);
   const concreteLabels = concrete.map(d => d.Material);
   const concreteValues = concrete.map(d => d["Baseline Demand (lbs)"]);
+  const costLabels = cost.map(d => d.Material);
+  const costValues = cost.map(d => d["Baseline Cost (2026 USD)"]);
 
   const ctx1 = document.getElementById("materialsPie").getContext("2d");
   const ctx2 = document.getElementById("concretePie").getContext("2d");
+  const ctx3 = document.getElementById("costPie").getContext("2d");
 
   chart = new Chart(ctx1, {
     type: "pie",
@@ -145,6 +156,21 @@ async function loadCharts() {
     },
     options: chartOptions(),
   });
+
+  chart3 = new Chart(ctx3, {
+    type: "pie",
+    data: {
+      labels: costLabels,
+      datasets: [{
+        label: "Material Cost",
+        data: costValues,
+        backgroundColor: greyColors(costLabels),
+        borderColor: "#fff",
+        borderWidth: 1,
+      }],
+    },
+    options: chartOptions(),
+  });  
 }
 
 /* ---------- form submission ---------- */
@@ -176,15 +202,22 @@ form.addEventListener("submit", async (event) => {
     .then(res => res.json())
     .catch(error => console.error("Error loading updated materials data:", error));
   console.log("Updated materials data:", updatedMaterials);
-  updateChart(chart, updatedMaterials);
+  updateChart(chart, updatedMaterials, "Baseline Demand (lbs)");
   console.log("All materials chart updated successfully!");
 
   const updatedConcrete = await fetch("/static/processed_data/concrete_demand.json" + bust)
     .then(res => res.json())
     .catch(error => console.error("Error loading updated concrete data:", error));
   console.log("Updated concrete data:", updatedConcrete);
-  updateChart(chart2, updatedConcrete);
+  updateChart(chart2, updatedConcrete, "Baseline Demand (lbs)");
   console.log("Concrete chart updated successfully!");
-});
+
+  const updatedCost = await fetch("/static/processed_data/new_bldg_cost.json" + bust)
+    .then(res => res.json())
+    .catch(error => console.error("Error loading updated cost data:", error));
+  console.log("Updated cost data:", updatedCost);
+  updateChart(chart3, updatedCost, "Baseline Cost (2026 USD)"); 
+  console.log("Cost chart updated successfully!");
+  });
 
 loadCharts();
