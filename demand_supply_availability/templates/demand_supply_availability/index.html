@@ -365,7 +365,7 @@
         <div class="chart-container">
           <h3 class="panel-title">MATERIAL AVAILABILITY</h3>
           <div class="slider-row" style="margin-bottom: 15px;">
-            <label for="id_construction_year" style="font-size: 13px; font-weight: bold;">Construction year</label>
+            <label for="id_construction_year" style="font-size: 13px; font-weight: bold;">Year</label>
             <div class="slider-input">
               {{ form.construction_year }}
               <output for="id_construction_year">{{ form.construction_year.value }}</output>
@@ -379,8 +379,11 @@
         <div class="map-section">
           <h3 class="panel-title">MATERIAL SUPPLY, DEMAND, AND AVAILABILITY MAP</h3>
           <div class="map-controls">
+            <div id="map-scenario-label" style="font-weight: bold; color: #222; margin-right: 15px; font-size: 13px; border-right: 2px solid #ccc; padding-right: 15px;">
+              Scenario: Baseline
+            </div>
             <label for="metric-select">Show</label>
-            <select id="metric-select">
+                      <select id="metric-select">
               <option value="availability">Availability (supply − demand)</option>
               <option value="supply">Supply</option>
               <option value="demand">Demand</option>
@@ -453,6 +456,10 @@
         return currentMapData.data[activeMetric]?.[mat]?.[state]?.[mapYear] ?? null;
     }
     function fmt(v) { return v === null ? 'no data' : v.toFixed(2); }
+    function getCurrentScenarioText() {
+        const selectedRadio = document.querySelector('input[name="scenario"]:checked');
+        return selectedRadio ? selectedRadio.parentElement.textContent.trim() : "Baseline";
+    }
     function colorFor(mat, val) {
         if (val === null) return NO_DATA;
         const s = mapScales[activeMetric]?.[mat];
@@ -477,6 +484,8 @@
             constructionYear = mapYear; 
             document.getElementById('year-slider').value = mapYear;
             document.getElementById('year-label').textContent = mapYear;
+            document.getElementById('map-scenario-label').textContent = "Scenario: " + getCurrentScenarioText();
+
             if (typeof refreshMap === 'function') refreshMap(true); 
             if (typeof renderBarChart === 'function') renderBarChart();
         } catch (e) { console.error("Error loading scenario data:", e); }
@@ -493,9 +502,12 @@
         const info = L.control({ position: 'topright' });
         info.onAdd = function() { this._div = L.DomUtil.create('div', 'map-info'); return this._div; };
         info.update = function(props) {
+            const scenario = getCurrentScenarioText(); // Get the active scenario
             const val = valueFor(activeMaterial, props ? props.name : null);
-            this._div.innerHTML = `<strong>${activeMaterial}</strong><br>${activeMetric}, ${mapYear}<hr>` + 
-                (props ? `${props.name}: ${val === null ? 'no data' : fmt(val) + 'M tons'}` : 'Hover over state');
+            
+            this._div.innerHTML = `<strong>Scenario: ${scenario}</strong><br>` + 
+                                  `<strong>${activeMaterial}</strong><br>${activeMetric}, ${mapYear}<hr>` + 
+                                  (props ? `${props.name}: ${val === null ? 'no data' : fmt(val) + 'M tons'}` : 'Hover over state');
         };
         info.addTo(mapInstance);
 
@@ -552,6 +564,14 @@
                 });
                 if (mapLayerControl) mapInstance.removeControl(mapLayerControl);
                 mapLayerControl = L.control.layers(baseLayers, {}, {collapsed: false}).addTo(mapInstance);
+                
+                // FIX: Listener to update activeMaterial when user clicks a different layer in the control
+                mapInstance.on('baselayerchange', function(e) {
+                    activeMaterial = e.name;
+                    info.update();
+                    legend.update();
+                });
+
                 if (!activeMaterial || !mapLayers[activeMaterial]) {
                     const validKeys = Object.keys(baseLayers);
                     activeMaterial = validKeys.length > 0 ? validKeys[0] : '';
