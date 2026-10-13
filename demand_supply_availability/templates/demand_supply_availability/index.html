@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -33,7 +33,6 @@
       border: 1px solid #898888;
     }
 
-    /* general styles */
     .panel-title {
       font-family: Arial, sans-serif;
       font-size: 24px;
@@ -46,7 +45,6 @@
       font-family: Arial, sans-serif;
     }
 
-    /* layout for demand charts */
     .specifications-and-charts-container {
       display: flex;
       align-items: flex-start;
@@ -61,7 +59,6 @@
       box-sizing: border-box;
       margin: 0;
     }
-    /* form layout */
     .form-grid {
       display: grid;
       grid-template-columns: max-content 1fr;
@@ -86,14 +83,12 @@
       justify-self: start;
     }
 
-    /* submit button */
     .submit-button {
       margin-top: 20px;
       padding: 10px 20px;
       font-size: 20px;
     }
 
-    /* charts layout */
     .charts-container {
       display: flex;
       flex-direction: row;
@@ -107,8 +102,18 @@
       box-sizing: border-box;
     }
 
-    /* Chart.js overwrites inline width/height on the canvas itself, so the
-       canvas needs its own dedicated wrapper to size against. */
+    .map-and-availability-wrapper {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      align-items: flex-start;
+      margin-top: 30px;
+    }
+
+    .map-section { 
+      margin-top: 0 !important; 
+    }
+
     .canvas-wrap {
       position: relative;
       height: 380px;
@@ -136,7 +141,7 @@
       cursor: pointer;
     }
 
-    .scenario-list input[type="checkbox"] {
+    .scenario-list input[type="radio"] {
       margin: 0;
       flex: 0 0 auto;
     }
@@ -231,8 +236,6 @@
       border-radius: 4px;
       cursor: pointer;
     }
-
-
   </style>
 </head>
 
@@ -242,14 +245,12 @@
       <img src="{% static 'images/lbl_logo.jpeg' %}" alt="Berkeley Lab" class="brand-logo">
     </a>
     <a class="brand-name" href="/">Building Supply chain Material Analysis and Risk Trade-off Tool (BuildSMART)</a>
-  
     <ul class="nav-links">
       <li><a href="/" class="active">Tool</a></li>
       <li><a href="/data-sources/">Data Sources</a></li>
       <li><a href="/about/">About</a></li>
       <li><a href="/faq/">FAQs</a></li>
     </ul>
-  
     <button type="button" class="feedback-btn" id="feedback-btn">Give Feedback</button>
   </nav>
 
@@ -257,113 +258,86 @@
     <div class="controls-column">
       <details class="building-specifications" open>
         <summary class="spec-summary">Building Specifications</summary>
-      
         <form method="post">
-          <h3>New Building</h3>
-      
+          <h3 style="font-family: Arial, sans-serif;">New Building</h3>
           {% csrf_token %}
           <div class="form-grid">
             <label for="id_location">Location</label>
             {{ form.location }}
-          
             <label for="id_building_type">Building type</label>
             {{ form.building_type }}
-          
             <label for="id_square_footage">Building size (sq ft)</label>
             {{ form.square_footage }}
-
-            <label for="id_construction_year">Construction year</label>
-            <div class="slider-input">
-              {{ form.construction_year }}
-              <output for="id_construction_year">{{ form.construction_year.value }}</output>
-            </div>            
-
             <label for="id_reuse_materials">Reuse materials?</label>
             {{ form.reuse_materials }}
           </div>
-          
           <div id="demolished-building-text" style="display: none;">
-            <h3>Demolished Building</h3>
+            <h3 style="font-family: Arial, sans-serif;">Demolished Building</h3>
           </div>
-          
           <div id="old-building-fields" class="form-grid" style="display: none;">
             <label for="id_old_location">Location</label>
             {{ form.old_location }}
-
             <label for="id_old_building_type">Building type</label>
             {{ form.old_building_type }}
-          
             <label for="id_old_building_square_footage">Building size (sq ft)</label>
             {{ form.old_building_square_footage }}
           </div>      
-          
           <button type="submit" class="submit-button">Estimate baseline material demand, availability, and cost</button>
         </form>
       </details>
 
       <details class="material-availability">
         <summary class="spec-summary">Material Availability Scenarios</summary>
-  
         <div class="scenario-list">
-          <label><input type="checkbox" name="scenario" value="Fly ash recovery (upper limit)"> Fly ash recovery (upper limit)</label>
-          <label><input type="checkbox" name="scenario" value="Fly ash recovery (lower limit)"> Fly ash recovery (lower limit)</label>
-          <label><input type="checkbox" name="scenario" value="Blast furnace slag production (upper limit)"> Blast furnace slag production (upper limit)</label>
-          <label><input type="checkbox" name="scenario" value="Blast furnace slag production (lower limit)"> Blast furnace slag production (lower limit)</label>
-          <label><input type="checkbox" name="scenario" value="Natural pozzolan recovery (upper limit)"> Natural pozzolan recovery (upper limit)</label>
-          <label><input type="checkbox" name="scenario" value="Natural pozzolan recovery (lower limit)"> Natural pozzolan recovery (lower limit)</label>
+          <label><input type="radio" name="scenario" value="baseline" checked> Baseline (No Scenario)</label>
+          <label><input type="radio" name="scenario" value="increased_continued_use_of_coal_for_electricity_generation"> Increased/continued use of coal for electricity generation </label>
+          <label><input type="radio" name="scenario" value="reduced_use_of_coal_for_electricity_generation"> Reduced use of coal for electricity generation </label>
+          <label><input type="radio" name="scenario" value="increased_continued_operation_of_blast_furnaces_for_domestic_steel_production"> Increased/continued operation of blast furnaces for domestic steel production</label>
+          <label><input type="radio" name="scenario" value="retirement_of_blast_furnaces_for_domestic_steel_production"> Retirement of blast furnaces for domestic steel production</label>
+          <label><input type="radio" name="scenario" value="no_increase_in_domestic_cement_production_capacity"> No increase in domestic cement production capacity </label>
+          <label><input type="radio" name="scenario" value="fast_track_to_utilization_of_natural_pozzolans"> Fast track to utilization of natural pozzolans</label>
+          <label><input type="radio" name="scenario" value="fast_track_to_harvesting_and_processing_recovered_fly_ash_for_use_as_scms"> Fast track to harvesting and processing recovered fly ash for use as SCMs</label>
+          <label><input type="radio" name="scenario" value="cement_steel_plant_shutdown_(temporary_or_long_term)"> Cement/steel plant shutdown (temporary or long term)</label>
+          <label><input type="radio" name="scenario" value="blended_cements"> Increased production of blended cements</label>
+          <label><input type="radio" name="scenario" value="import_disruptions"> Import disruptions</label>
         </div>
       </details>
 
       <details class="alternative-materials">
         <summary class="spec-summary">Alternative Materials</summary>
-      
         <div class="slider-list">
           <div class="slider-row">
             <label for="util-fly-ash-alt">Recovered fly ash</label>
             <div class="slider-input">
-              <input type="range" id="util-fly-ash-alt" class="util-slider"
-                     data-material="Fly ash (alternative)"
-                     min="0" max="30" step="5" value="0">
+              <input type="range" id="util-fly-ash-alt" class="util-slider" data-material="Fly ash (alternative)" min="0" max="30" step="5" value="0">
               <output for="util-fly-ash-alt">0%</output>
             </div>
           </div>
-      
           <div class="slider-row">
             <label for="util-pozz">Natural pozzolans</label>
             <div class="slider-input">
-              <input type="range" id="util-pozz" class="util-slider"
-                     data-material="Natural pozzolans"
-                     min="0" max="40" step="5" value="0">
+              <input type="range" id="util-pozz" class="util-slider" data-material="Natural pozzolans" min="0" max="40" step="5" value="0">
               <output for="util-pozz">0%</output>
             </div>
           </div>
-      
           <div class="slider-row">
             <label for="util-gypsum">Recovered gypsum</label>
             <div class="slider-input">
-              <input type="range" id="util-gypsum" class="util-slider"
-                     data-material="Recovered gypsum"
-                     min="0" max="100" step="5" value="0">
+              <input type="range" id="util-gypsum" class="util-slider" data-material="Recovered gypsum" min="0" max="100" step="5" value="0">
               <output for="util-gypsum">0%</output>
             </div>
           </div>
-
           <div class="slider-row">
             <label for="util-powder">Recycled concrete powder</label>
             <div class="slider-input">
-              <input type="range" id="util-powder" class="util-slider"
-                     data-material="Recycled concrete powder"
-                     min="0" max="30" step="5" value="0">
+              <input type="range" id="util-powder" class="util-slider" data-material="Recycled concrete powder" min="0" max="30" step="5" value="0">
               <output for="util-powder">0%</output>
             </div>
           </div>
-
           <div class="slider-row">
             <label for="util-agg">Recycled concrete aggregates</label>
             <div class="slider-input">
-              <input type="range" id="util-agg" class="util-slider"
-                     data-material="Recycled concrete aggregates"
-                     min="0" max="100" step="5" value="0">
+              <input type="range" id="util-agg" class="util-slider" data-material="Recycled concrete aggregates" min="0" max="100" step="5" value="0">
               <output for="util-agg">0%</output>
             </div>
           </div>
@@ -375,59 +349,59 @@
       <div class="charts-container">
         <div class="chart-container">
           <h3 class="panel-title">MATERIAL DEMAND</h3>
-          <div class="canvas-wrap">
-            <canvas id="materialsPie"></canvas>
-          </div>
+          <div class="canvas-wrap"><canvas id="materialsPie"></canvas></div>
         </div>
         <div class="chart-container">
           <h3 class="panel-title">CONCRETE CONSTITUENTS</h3>
-          <div class="canvas-wrap">
-            <canvas id="concretePie"></canvas>
-          </div>
+          <div class="canvas-wrap"><canvas id="concretePie"></canvas></div>
         </div>        
         <div class="chart-container">
           <h3 class="panel-title">MATERIAL COST</h3>
-          <div class="canvas-wrap">
-            <canvas id="costPie"></canvas>
-          </div>
-        </div>
-        <div class="chart-container">
-          <h3 class="panel-title">MATERIAL AVAILABILITY</h3>
-          <div id="avail-subtitle" style="font-size:12px;color:#555;margin-bottom:6px">
-          </div>
-          <div class="canvas-wrap">
-            <canvas id="availabilityBar"></canvas>
-          </div>
-          <div id="avail-note" style="font-size:11px;color:#777;margin-top:6px"></div>
+          <div class="canvas-wrap"><canvas id="costPie"></canvas></div>
         </div>
       </div>
 
-      <div class="map-section">
-        <h3 class="panel-title">SUPPLY, DEMAND, AND AVAILABILITY MAP</h3>
-        <div class="map-controls">
-          <label for="metric-select">Show</label>
-          <select id="metric-select">
-            <option value="availability">Availability (supply − demand)</option>
-            <option value="supply">Supply</option>
-            <option value="demand">Demand</option>
-          </select>
-          <label for="year-slider">Year: <strong id="year-label">2025</strong></label>
-          <input type="range" id="year-slider" min="2025" max="2050" step="1" value="2025">
+      <div class="map-and-availability-wrapper">
+        <div class="chart-container">
+          <h3 class="panel-title">MATERIAL AVAILABILITY</h3>
+          <div class="slider-row" style="margin-bottom: 15px;">
+            <label for="id_construction_year" style="font-size: 13px; font-weight: bold;">Construction year</label>
+            <div class="slider-input">
+              {{ form.construction_year }}
+              <output for="id_construction_year">{{ form.construction_year.value }}</output>
+            </div>
+          </div>
+          <div id="avail-subtitle" style="font-size:12px;color:#555;margin-bottom:6px"></div>
+          <div class="canvas-wrap"><canvas id="availabilityBar"></canvas></div>
+          <div id="avail-note" style="font-size:11px;color:#777;margin-top:6px"></div>
         </div>
-        <div id="map"></div>
+    
+        <div class="map-section">
+          <h3 class="panel-title">MATERIAL SUPPLY, DEMAND, AND AVAILABILITY MAP</h3>
+          <div class="map-controls">
+            <label for="metric-select">Show</label>
+            <select id="metric-select">
+              <option value="availability">Availability (supply − demand)</option>
+              <option value="supply">Supply</option>
+              <option value="demand">Demand</option>
+            </select>
+            <label for="year-slider">Year: <strong id="year-label">2025</strong></label>
+            <input type="range" id="year-slider" min="2025" max="2050" step="1" value="2025">
+          </div>
+          <div id="map"></div>
+        </div>
       </div>
     </div>
   </div>
-  
-  <script>
 
-    // JavaScript to toggle the visibility of old building fields
+  <script>
+    // UI Toggle Logic
     const reuseMaterialsCheckbox = document.getElementById("id_reuse_materials");
     const demolishedBuildingText = document.getElementById("demolished-building-text");
     const oldBuildingFields = document.getElementById("old-building-fields");
     const oldFields = oldBuildingFields.querySelectorAll("input, select");
-    const constructionYear = document.getElementById("id_construction_year");
-    const constructionYearOut = constructionYear.nextElementSibling;
+    const constructionYearField = document.getElementById("id_construction_year");
+    const constructionYearOut = constructionYearField.nextElementSibling;
 
     reuseMaterialsCheckbox.addEventListener("change", function () {
         const show = this.checked;
@@ -435,420 +409,243 @@
         demolishedBuildingText.style.display = show ? "block" : "none";
         oldFields.forEach(el => { el.required = show; });
     });
-
     reuseMaterialsCheckbox.dispatchEvent(new Event("change"));
-
-    constructionYear.addEventListener("input", function () {
-      constructionYearOut.textContent = this.value;
-    });
   </script>
 
   <script>
-    // JavaScript to display supply, demand, and availability maps
-    const MAP_DATA_URL = "{% static 'processed_data/map_data.json' %}";
+    // --- GLOBAL STATE ---
+    let currentMapData = null;
+    let mapInstance = null;
+    let barChartInstance = null;
+    let mapLayerControl = null; 
+    let mapLayers = {};
+    let mapScales = {};
+    let activeMaterial = '';
+    let activeMetric = 'availability';
+    let mapYear = '2025';
+    let constructionYear = '2025';
+
     const STATES_GEOJSON_URL = "{% static 'raw_data/us-states.json' %}";
+    const CONCRETE_DEMAND_URL = "{% static 'processed_data/concrete_demand.json' %}";
+    const SEQUENTIAL = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b'];
+    const DIVERGING  = ['#b2182b', '#ef8a62', '#f7f7f7', '#67a9cf', '#2166ac'];
+    const NO_DATA    = '#e0e0e0';
 
-    // Shared so the availability chart can reuse it without a second fetch.
-    const mapDataPromise = fetch(MAP_DATA_URL).then(r => r.json());
+    function getScenarioUrl(scenarioValue) {
+        if (scenarioValue === 'baseline') return "{% static 'processed_data/map_data.json' %}";
+        return "{% static 'processed_data/map_data_' %}" + scenarioValue + ".json";
+    }
 
-    (async function () {
-      const [mapData, statesGeo] = await Promise.all([
-        mapDataPromise,
-        fetch(STATES_GEOJSON_URL).then(r => r.json()),
-      ]);
-    
-      const SEQUENTIAL = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b'];
-      const DIVERGING  = ['#b2182b', '#ef8a62', '#f7f7f7', '#67a9cf', '#2166ac'];
-      const NO_DATA    = '#e0e0e0';
-      const METRICS = ['availability', 'supply', 'demand'];
-
-      // Pozzolan only has supply data, so the layer list has to be the union across
-      // metrics rather than the keys of whichever metric happens to load first.
-      const allMaterials = [];
-      for (const m of METRICS) {
-        for (const mat of Object.keys(mapData.data[m] || {})) {
-          if (!allMaterials.includes(mat)) allMaterials.push(mat);
-        }
-      }
-
-      function hasData(m, material) {
-        return Boolean(mapData.data[m] && mapData.data[m][material]);
-      }
-
-      let metric = 'availability';
-      let year = String(mapData.years[0]);
-      let activeMaterial = allMaterials[0];
-
-      function lerpColor(a, b, t) {
+    // --- COLOR HELPERS ---
+    function lerpColor(a, b, t) {
         const ah = a.match(/\w\w/g).map(x => parseInt(x, 16));
         const bh = b.match(/\w\w/g).map(x => parseInt(x, 16));
-        return '#' + ah.map((v, i) => Math.round(v + (bh[i] - v) * t))
-                      .map(v => v.toString(16).padStart(2, '0')).join('');
-      }
-      function ramp(stops, t) {
+        return '#' + ah.map((v, i) => Math.round(v + (bh[i] - v) * t)).map(v => v.toString(16).padStart(2, '0')).join('');
+    }
+    function ramp(stops, t) {
         t = Math.min(1, Math.max(0, t));
         const seg = t * (stops.length - 1);
         const i = Math.min(Math.floor(seg), stops.length - 2);
         return lerpColor(stops[i], stops[i + 1], seg - i);
-      }
-    
-      const scales = {};
-      for (const m of Object.keys(mapData.data)) {
-        scales[m] = {};
-        for (const mat of Object.keys(mapData.data[m])) {
-          let min = Infinity, max = -Infinity;
-          for (const st of Object.values(mapData.data[m][mat])) {
-            for (const v of Object.values(st)) {
-              if (v === null) continue;
-              if (v < min) min = v;
-              if (v > max) max = v;
-            }
-          }
-          if (!isFinite(min)) { min = 0; max = 1; }
-          scales[m][mat] = { min, max, diverging: (m === 'availability' && min < 0) };
-        }
-      }
-    
-      function valueFor(material, stateName) {
-        const states = mapData.data[metric][material] || {};
-        const rec = states[stateName];
-        return rec ? (rec[year] ?? null) : null;
-      }
-    
-      function colorFor(material, value) {
-        if (value === null) return NO_DATA;
-        const s = scales[metric][material];
+    }
+    function valueFor(mat, state) {
+        if (!state || !currentMapData) return null;
+        return currentMapData.data[activeMetric]?.[mat]?.[state]?.[mapYear] ?? null;
+    }
+    function fmt(v) { return v === null ? 'no data' : v.toFixed(2); }
+    function colorFor(mat, val) {
+        if (val === null) return NO_DATA;
+        const s = mapScales[activeMetric]?.[mat];
         if (!s) return NO_DATA;
         if (s.diverging) {
-          const bound = Math.max(Math.abs(s.min), Math.abs(s.max)) || 1;
-          // sqrt keeps small values visible when one state dominates the range
-          const t = 0.5 + 0.5 * Math.sign(value) * Math.sqrt(Math.abs(value) / bound);
-          return ramp(DIVERGING, t);
+            const bound = Math.max(Math.abs(s.min), Math.abs(s.max)) || 1;
+            const t = 0.5 + 0.5 * Math.sign(val) * Math.sqrt(Math.abs(val) / bound);
+            return ramp(DIVERGING, t);
+        } else {
+            const span = (s.max - s.min) || 1;
+            return ramp(SEQUENTIAL, Math.sqrt((val - s.min) / span));
         }
-        const span = (s.max - s.min) || 1;
-        return ramp(SEQUENTIAL, Math.sqrt((value - s.min) / span));
-      }
-    
-      function fmt(v) {
-        if (v === null) return 'no data';
-        const abs = Math.abs(v);
-        // Values arrive already scaled to million U.S. tons.
-        if (abs >= 100) return v.toFixed(0);
-        if (abs >= 1)   return v.toFixed(1);
-        if (abs >= 0.01) return v.toFixed(2);
-        return v.toFixed(3);
-      }
-    
-      const map = L.map('map', { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors, &copy; CARTO', maxZoom: 12
-      }).addTo(map);
-    
-      const info = L.control({ position: 'topright' });
-      info.onAdd = function () {
-        this._div = L.DomUtil.create('div', 'map-info');
-        this.update();
-        return this._div;
-      };
-      info.update = function (props) {
-        const name = props ? props.name : null;
-        this._div.innerHTML = '<strong>' + activeMaterial + '</strong><br>' +
-          metric + ', ' + year + '<hr style="margin:4px 0">' +
-          (name ? name + ': ' + (() => {
-                    const v = valueFor(activeMaterial, name);
-                    return v === null ? 'no data'
-                                      : fmt(v) + ' million U.S. tons';
-                  })()
-                : 'Hover over a state');
-      };
-      info.addTo(map);
-    
-      const legend = L.control({ position: 'bottomright' });
-      legend.onAdd = function () {
-        this._div = L.DomUtil.create('div', 'map-info map-legend');
-        this.update();
-        return this._div;
-      };
-      legend.update = function () {
-        const s = scales[metric][activeMaterial];
-        if (!s) {
-          this._div.innerHTML =
-            '<span class="legend-nodata"></span> no ' + metric +
-            ' data for ' + activeMaterial;
-          return;
-        }
-        const stops = s.diverging ? DIVERGING : SEQUENTIAL;
-        const lo = s.diverging ? -Math.max(Math.abs(s.min), Math.abs(s.max)) : s.min;
-        const hi = s.diverging ?  Math.max(Math.abs(s.min), Math.abs(s.max)) : s.max;
-        this._div.innerHTML =
-          '<div class="legend-bar" style="background:linear-gradient(to right,'
-            + stops.join(',') + ')"></div>' +
-          '<div class="legend-scale"><span>' + fmt(lo) + '</span><span>'
-            + fmt(hi) + '</span></div>' +
-          '<div style="font-size:11px;color:#555;margin:2px 0 4px">' +
-            'million U.S. tons</div>' +
-          '<span class="legend-nodata"></span> no data';
-      };
-      legend.addTo(map);
-    
-      function styleFor(material) {
-        return feature => ({
-          fillColor: colorFor(material, valueFor(material, feature.properties.name)),
-          weight: 1, color: '#ffffff', fillOpacity: 0.85
-        });
-      }
-    
-      // One choropleth layer per material, registered as *base* layers so the
-      // control shows radio buttons
-      const materialLayers = {};
-      const baseLayers = {};
-      for (const material of allMaterials) {
-        const layer = L.geoJSON(statesGeo, {
-          style: styleFor(material),
-          onEachFeature: (feature, lyr) => {
-            lyr.on({
-              mouseover: e => {
-                e.target.setStyle({ weight: 3, color: '#333', fillOpacity: 0.95 });
-                e.target.bringToFront();
-                info.update(feature.properties);
-              },
-              mouseout: e => {
-                materialLayers[material].resetStyle(e.target);
-                info.update();
-              },
-              click: e => map.fitBounds(e.target.getBounds())
-            });
-          }
-        });
-        materialLayers[material] = layer;
-        baseLayers[material] = layer;
-      }
-    
-      // Overlays are on/off checkboxes
-      const projectLayer = L.layerGroup();
-      const overlays = { 'Project location': projectLayer };
-    
-      L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
-      materialLayers[activeMaterial].addTo(map);
-    
-      function refresh() {
-        for (const [material, layer] of Object.entries(materialLayers)) {
-          layer.setStyle(styleFor(material));
-        }
-        info.update();
-        legend.update();
-      }
-    
-      map.on('baselayerchange', e => { activeMaterial = e.name; refresh(); });
-    
-      document.getElementById('metric-select').addEventListener('change', function () {
-        metric = this.value;
-        refresh();
-      });
-    
-      const slider = document.getElementById('year-slider');
-      slider.min = mapData.years[0];
-      slider.max = mapData.years[mapData.years.length - 1];
-      slider.addEventListener('input', function () {
-        year = this.value;
-        document.getElementById('year-label').textContent = year;
-        refresh();
-      });
-    
-      window.setProjectLocation = function (lat, lon, label) {
-        projectLayer.clearLayers();
-        L.marker([lat, lon]).bindPopup(label || 'Project site').addTo(projectLayer);
-        projectLayer.addTo(map);
-      };
-    })();
-
-    function selectedScenarios() {
-      return [...document.querySelectorAll('input[name="scenario"]:checked')]
-        .map(el => el.value);
     }
 
-    document.querySelector('.scenario-list').addEventListener('change', () => {
-      console.log(selectedScenarios());
-    });
+    // --- DATA LOADING ---
+    async function loadScenarioData(scenarioValue) {
+        const url = getScenarioUrl(scenarioValue);
+        try {
+            const response = await fetch(url);
+            currentMapData = await response.json();
+            mapYear = String(currentMapData.years[0]);
+            constructionYear = mapYear; 
+            document.getElementById('year-slider').value = mapYear;
+            document.getElementById('year-label').textContent = mapYear;
+            if (typeof refreshMap === 'function') refreshMap(true); 
+            if (typeof renderBarChart === 'function') renderBarChart();
+        } catch (e) { console.error("Error loading scenario data:", e); }
+    }
 
-    function utilizationRates() {
+    // --- MAP LOGIC ---
+    async function initMap() {
+        const statesGeo = await fetch(STATES_GEOJSON_URL).then(r => r.json());
+        mapInstance = L.map('map', { scrollWheelZoom: false }).setView([39.5, -98.35], 4);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(mapInstance);
 
-      const rates = {};
-    document.querySelectorAll('.util-slider').forEach(el => {
-      rates[el.dataset.material] = Number(el.value) / 100;
-    });
-    return rates;
-  }
-
-  document.querySelector('.slider-list').addEventListener('input', (e) => {
-    if (!e.target.classList.contains('util-slider')) return;
-    e.target.nextElementSibling.textContent = e.target.value + '%';
-    console.log(utilizationRates());
-  });
-
-  </script>
-  <script>
-    const CONCRETE_DEMAND_URL = "{% static 'processed_data/concrete_demand.json' %}";
-
-    (async function () {
-      const [mapData, concreteRaw] = await Promise.all([
-        mapDataPromise,
-        fetch(CONCRETE_DEMAND_URL + '?t=' + Date.now()).then(r => r.ok ? r.json() : []),
-      ]);
-
-      // --- concrete_demand.json material names -> map_data.json material keys ---
-      // Coarse/fine and natural/crushed all collapse to 'Aggregate' because we
-      // only have combined aggregate availability; their demands get summed.
-      const MATERIAL_KEY = {
-        'Crushed coarse aggregates': 'Aggregate',
-        'Natural coarse aggregates': 'Aggregate',
-        'Crushed fine aggregates': 'Aggregate',
-        'Natural fine aggregates': 'Aggregate',
-        'Cement': 'Cement',
-        'Fly ash': 'Fly ash (conventional)',
-        'Blast furnace slag': 'Blast furnace slag'
-      };
-
-      // Fixed bar order so bars don't reshuffle between renders.
-      const DISPLAY_ORDER = ['Cement', 'Aggregate', 'Fly ash (conventional)',
-                             'Fly ash (alternative)', 'Blast furnace slag',
-                             'Pozzolan'];
-
-      // Sum demand into map_data material keys.
-      function demandByMaterial(rows) {
-        const out = {};
-        const unmapped = [];
-        for (const row of rows) {
-          const name = (row['Material'] ?? '').trim();
-          const val = Number(row['Baseline Demand (lbs)']) || 0;
-          const key = MATERIAL_KEY[name];
-          if (!key) { unmapped.push(name); continue; }
-          out[key] = (out[key] || 0) + val;
-        }
-        if (unmapped.length) console.log('Unmapped concrete rows:', unmapped);
-        return out;
-      }
-
-      const demand = demandByMaterial(concreteRaw);
-
-      // concrete_demand.json is one building in lbs; map_data is in
-      // MILLION U.S. tons.
-      const BLDG_TO_MILLION_TONS = 1 / 2000 / 1e6;
-
-      const canvas = document.getElementById('availabilityBar');
-      const subtitle = document.getElementById('avail-subtitle');
-      const note = document.getElementById('avail-note');
-      let chart = null;
-
-      function selectedState() {
-        const el = document.getElementById('id_location');
-        if (!el) return null;
-        const txt = el.tagName === 'SELECT'
-          ? el.options[el.selectedIndex].text
-          : el.value;
-        return (txt || '').trim();
-      }
-
-      function selectedYear() {
-        const el = document.getElementById('id_construction_year');
-        const y = el ? Number(el.value) : mapData.years[0];
-        return String(Math.min(Math.max(y, mapData.years[0]),
-                              mapData.years[mapData.years.length - 1]));
-      }
-
-      // Baseline availability for a material, or supply if the material has no
-      // demand series (Pozzolan). Returns null when the state has no data.
-      function baseline(materialKey, state, yr) {
-        for (const m of ['availability', 'supply']) {
-          const states = (mapData.data[m] || {})[materialKey];
-          if (!states) continue;
-          const rec = states[state];
-          if (!rec) continue;
-          const v = rec[yr];
-          if (v !== null && v !== undefined) return { value: v, metric: m };
-        }
-        return null;
-      }
-
-      function render() {
-        const state = selectedState();
-        const yr = selectedYear();
-        subtitle.textContent = state
-          ? state + ', ' + yr + ' (million U.S. tons)'
-          : 'Select a location';
-
-        const labels = [], values = [], colors = [], missing = [], supplyOnly = [];
-
-        for (const key of DISPLAY_ORDER) {
-          if (!(key in demand)) continue;
-          const lbs = demand[key];
-          const base = baseline(key, state, yr);
-          if (!base) { missing.push(key); continue; }
-          if (base.metric === 'supply') supplyOnly.push(key);
-
-          const net = base.value - lbs * BLDG_TO_MILLION_TONS;
-          labels.push(key);
-          values.push(net);
-          colors.push(net < 0 ? '#b2182b' : '#2171b5');
-        }
-
-        const cfg = {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Availability after this building',
-              data: values,
-              backgroundColor: colors,
-              borderColor: '#666',
-              borderWidth: 1,
-            }],
-          },
-          options: {
-            indexAxis: 'y',            
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: c => c.parsed.x.toFixed(3) + ' million U.S. tons',
-                },
-              },
-            },
-            scales: {
-              x: {
-                title: { display: true, text: 'Million U.S. tons' },
-                grid: { color: ctx => ctx.tick.value === 0 ? '#333' : '#e5e5e5' },
-              },
-              y: { ticks: { autoSkip: false } },
-            },
-          },
+        const info = L.control({ position: 'topright' });
+        info.onAdd = function() { this._div = L.DomUtil.create('div', 'map-info'); return this._div; };
+        info.update = function(props) {
+            const val = valueFor(activeMaterial, props ? props.name : null);
+            this._div.innerHTML = `<strong>${activeMaterial}</strong><br>${activeMetric}, ${mapYear}<hr>` + 
+                (props ? `${props.name}: ${val === null ? 'no data' : fmt(val) + 'M tons'}` : 'Hover over state');
         };
+        info.addTo(mapInstance);
 
-        if (chart) {
-          chart.data = cfg.data;
-          chart.options = cfg.options;
-          chart.update();
-        } else {
-          chart = new Chart(canvas.getContext('2d'), cfg);
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() { this._div = L.DomUtil.create('div', 'map-info map-legend'); return this._div; };
+        legend.update = function() {
+            const s = mapScales[activeMetric]?.[activeMaterial];
+            if (!s) { this._div.innerHTML = 'No data'; return; }
+            const stops = s.diverging ? DIVERGING : SEQUENTIAL;
+            this._div.innerHTML = `<div class="legend-bar" style="background:linear-gradient(to right,${stops.join(',')})"></div>
+                                  <div class="legend-scale"><span>${fmt(s.min)}</span><span>${fmt(s.max)}</span></div>`;
+        };
+        legend.addTo(mapInstance);
+
+        window.refreshMap = function(fullReset = false) {
+            if (!currentMapData) return;
+            mapScales = {};
+            const metrics = ['availability', 'supply', 'demand'];
+            const allMaterials = [];
+            
+            metrics.forEach(m => {
+                mapScales[m] = {};
+                const dataForMetric = currentMapData.data[m] || {};
+                const mats = Object.keys(dataForMetric);
+                
+                mats.forEach(mat => {
+                    const matStr = String(mat).trim();
+                    const isInvalid = !matStr || matStr.toLowerCase() === 'undefined' || matStr.toLowerCase() === 'null' || !/^[a-z0-9]/i.test(matStr);
+                    if (!isInvalid) allMaterials.push(matStr);
+                    
+                    let vals = Object.values(dataForMetric[mat]).flatMap(st => Object.values(st)).filter(v => v !== null);
+                    if (vals.length > 0) {
+                        mapScales[m][mat] = { min: Math.min(...vals), max: Math.max(...vals), diverging: (m === 'availability' && Math.min(...vals) < 0) };
+                    }
+                });
+            });
+
+            if (fullReset) {
+                mapInstance.eachLayer(layer => { if(layer.options.isMaterialLayer) mapInstance.removeLayer(layer); });
+                mapLayers = {};
+                const baseLayers = {};
+                const cleanMaterials = [...new Set(allMaterials)];
+                cleanMaterials.forEach(mat => {
+                    const layer = L.geoJSON(statesGeo, {
+                        style: (f) => ({ fillColor: colorFor(mat, valueFor(mat, f.properties.name)), weight: 1, color: '#fff', fillOpacity: 0.85 }),
+                        onEachFeature: (f, l) => {
+                            l.on('mouseover', e => { e.target.setStyle({weight: 3, color: '#333'}); info.update(f.properties); });
+                            l.on('mouseout', e => { l.setStyle({weight: 1, color: '#fff'}); info.update(); });
+                        },
+                        options: { isMaterialLayer: true }
+                    });
+                    mapLayers[mat] = layer;
+                    baseLayers[mat] = layer;
+                });
+                if (mapLayerControl) mapInstance.removeControl(mapLayerControl);
+                mapLayerControl = L.control.layers(baseLayers, {}, {collapsed: false}).addTo(mapInstance);
+                if (!activeMaterial || !mapLayers[activeMaterial]) {
+                    const validKeys = Object.keys(baseLayers);
+                    activeMaterial = validKeys.length > 0 ? validKeys[0] : '';
+                }
+                if (mapLayers[activeMaterial]) mapLayers[activeMaterial].addTo(mapInstance);
+            } else {
+                for (const mat in mapLayers) {
+                    mapLayers[mat].setStyle((f) => ({ fillColor: colorFor(mat, valueFor(mat, f.properties.name)) }));
+                }
+            }
+            info.update();
+            legend.update();
+        };
+    }
+
+    async function initCharts() {
+        await fetch(CONCRETE_DEMAND_URL).then(r => r.json());
+        window.renderBarChart = function() {
+            if (!currentMapData) return;
+            const state = document.getElementById('id_location')?.value || "";
+            const yr = constructionYear; 
+            const selectedRadio = document.querySelector('input[name="scenario"]:checked');
+            const scenarioText = selectedRadio ? selectedRadio.parentElement.textContent.trim() : "Baseline";
+            document.getElementById('avail-subtitle').textContent = `${scenarioText} | ${state}, ${yr}`;
+            const labels = [], values = [], colors = [];
+            const materials = ['Cement', 'Aggregate', 'Fly ash (conventional)', 'Blast furnace slag'];
+            materials.forEach(mat => {
+                const baseVal = currentMapData.data['availability']?.[mat]?.[state]?.[yr];
+                const net = (baseVal === null || baseVal === undefined) ? null : baseVal - 0.001; 
+                labels.push(mat); values.push(net);
+                colors.push(net === null ? '#e0e0e0' : (net < 0 ? '#b2182b' : '#2171b5'));
+            });
+            if (barChartInstance) {
+                barChartInstance.data.labels = labels;
+                barChartInstance.data.datasets[0].data = values;
+                barChartInstance.data.datasets[0].backgroundColor = colors;
+                barChartInstance.update();
+            } else {
+                barChartInstance = new Chart(document.getElementById('availabilityBar'), {
+                    type: 'bar',
+                    data: { 
+                        labels, 
+                        datasets: [{ 
+                            label: 'Availability (million U.S. tons)', // FIX: Added label to remove "undefined"
+                            data: values, 
+                            backgroundColor: colors 
+                        }] 
+                    },
+                    options: { 
+                        indexAxis: 'y', 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false } // FIX: Hide legend entirely for cleaner bar chart
+                        }
+                    }
+                });
+            }
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initMap();
+        await initCharts();
+        await loadScenarioData('baseline');
+
+        document.querySelector('.scenario-list').addEventListener('change', (e) => {
+            loadScenarioData(e.target.value);
+        });
+
+        const constructionYearSlider = document.getElementById('id_construction_year');
+        if (constructionYearSlider) {
+            constructionYearSlider.addEventListener('input', (e) => {
+                constructionYear = e.target.value; 
+                if (constructionYearSlider.nextElementSibling) constructionYearSlider.nextElementSibling.textContent = constructionYear;
+                renderBarChart();
+            });
         }
 
-        const msgs = [];
-        if (missing.length) msgs.push('No state data: ' + missing.join(', ') + '.');
-        if (supplyOnly.length) msgs.push('Supply only (no demand series): '
-                                        + supplyOnly.join(', ') + '.');
-        note.textContent = msgs.join(' ');
-      }
-
-      render();
-      document.getElementById('id_location')
-        ?.addEventListener('change', render);
-      document.getElementById('id_construction_year')
-        ?.addEventListener('input', render);
-    })();
+        const mapYearSlider = document.getElementById('year-slider');
+        if (mapYearSlider) {
+            mapYearSlider.addEventListener('input', (e) => {
+                mapYear = e.target.value; 
+                document.getElementById('year-label').textContent = mapYear;
+                refreshMap();
+            });
+        }
+        
+        document.getElementById('metric-select').addEventListener('change', (e) => {
+            activeMetric = e.target.value;
+            refreshMap();
+        });
+    });
   </script>
-
   <script src="{% static 'plot_base_demand.js' %}"></script>
 </body>
 </html>

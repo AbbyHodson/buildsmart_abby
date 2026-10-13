@@ -4,15 +4,14 @@ import os
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from demand_supply_availability.est_default_availability import (
+from demand_supply_availability.est_availability import (
     MATERIALS,
+    SCENARIOS,
     build_map_data,
     base_path,
 )
-
-
 class Command(BaseCommand):
-    help = "Rebuild map_data.json from the availability spreadsheet."
+    help = "Rebuild from the availability spreadsheet."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -21,6 +20,13 @@ class Command(BaseCommand):
             choices=MATERIALS,
             default=MATERIALS,
             help="Subset of materials to process (default: all).",
+        )
+        parser.add_argument(
+            "--scenarios",
+            nargs="+",
+            choices=SCENARIOS,
+            default=SCENARIOS,
+            help="Subset of scenarios to process (default: all).",
         )
         parser.add_argument(
             "--output",
@@ -33,11 +39,14 @@ class Command(BaseCommand):
             raise CommandError(f"Spreadsheet not found at {base_path}")
 
         materials = options["materials"]
+        scenarios = options["scenarios"]
         self.stdout.write(f"Processing {len(materials)} material(s)...")
+        self.stdout.write(f"Processing {len(scenarios)} scenario(s)...")
 
         try:
             out_path = build_map_data(
                 materials=materials,
+                scenarios=scenarios,
                 output_path=options["output"],
                 log=self.stdout.write,
             )
